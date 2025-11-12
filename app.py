@@ -1,4 +1,4 @@
-# app.py - GiftGenius Pro (Perfect, No Errors, Images Always Load)
+# app.py - GiftGenius Pro (Future-Proof, No Warnings)
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
@@ -82,7 +82,7 @@ def search_amazon(query, num_results=5):
             }]
         return products
 
-    except Exception as e:
+    except Exception:
         return [{
             "title": "Explore gifts on Amazon",
             "link": "https://www.amazon.com",
@@ -129,7 +129,7 @@ if "trad" in st.session_state:
     cols = st.columns(4)
     for i, p in enumerate(st.session_state.trad):
         with cols[i % 4]:
-            st.image(p["image"], use_container_width=True)
+            st.image(p["image"], width="stretch")  # Future-proof!
             st.markdown(f"**{p['title'][:80]}...**")
             st.caption(f"Rating: {p['rating']} • {p['price']}")
             st.markdown(f"[View on Amazon]({p['link']})")
@@ -140,7 +140,7 @@ if "mod" in st.session_state:
     cols = st.columns(4)
     for i, p in enumerate(st.session_state.mod):
         with cols[i % 4]:
-            st.image(p["image"], use_container_width=True)
+            st.image(p["image"], width="stretch")  # Future-proof!
             st.markdown(f"**{p['title'][:80]}...**")
             st.caption(f"Rating: {p['rating']} • {p['price']}")
             st.markdown(f"[View on Amazon]({p['link']})")
