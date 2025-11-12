@@ -1,41 +1,40 @@
-# app.py - Gimme Gift Ideas + Anniversary Themes (Pro Version)
+# app.py - Timeless Gift Ideas (US Amazon • Hitched.co.uk Style)
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
 
-st.set_page_config(page_title="Gimme Gift Ideas", page_icon="Gift", layout="centered")
+st.set_page_config(page_title="Timeless Gift Ideas", page_icon="Ring", layout="centered")
 
-# --- Anniversary Themes ---
+# --- Sophisticated Anniversary Themes (US Focus) ---
 ANNIVERSARIES = {
-    "Any Year": {"traditional": "", "modern": ""},
-    "1st": {"traditional": "Paper", "modern": "Clocks"},
-    "2nd": {"traditional": "Cotton", "modern": "China"},
-    "3rd": {"traditional": "Leather", "modern": "Crystal/Glass"},
-    "4th": {"traditional": "Fruit/Flowers", "modern": "Appliances"},
-    "5th": {"traditional": "Wood", "modern": "Silverware"},
-    "6th": {"traditional": "Iron", "modern": "Wood"},
-    "7th": {"traditional": "Copper/Wool", "modern": "Desk Sets"},
-    "8th": {"traditional": "Bronze/Pottery", "modern": "Linen/Lace"},
-    "9th": {"traditional": "Willow/Pottery", "modern": "Leather"},
-    "10th": {"traditional": "Aluminum/Tin", "modern": "Diamond Jewelry"},
-    "15th": {"traditional": "Crystal", "modern": "Watches"},
-    "20th": {"traditional": "China", "modern": "Platinum"},
-    "25th": {"traditional": "Silver", "modern": "Silver"},
-    "30th": {"traditional": "Pearl", "modern": "Diamond"},
-    "40th": {"traditional": "Ruby", "modern": "Ruby"},
-    "50th": {"traditional": "Gold", "modern": "Gold"},
-    "60th": {"traditional": "Diamond", "modern": "Diamond"},
+    "Any Year": {"traditional": "", "modern": "", "gemstone": ""},
+    "1st": {"traditional": "Paper", "modern": "Clocks", "gemstone": "Gold Jewelry"},
+    "2nd": {"traditional": "Cotton", "modern": "China", "gemstone": "Garnet"},
+    "3rd": {"traditional": "Leather", "modern": "Crystal", "gemstone": "Pearl"},
+    "4th": {"traditional": "Linen / Fruit & Flowers", "modern": "Appliances", "gemstone": "Blue Topaz"},
+    "5th": {"traditional": "Wood", "modern": "Silverware", "gemstone": "Sapphire"},
+    "6th": {"traditional": "Iron", "modern": "Wood", "gemstone": "Amethyst"},
+    "7th": {"traditional": "Wool / Copper", "modern": "Desk Sets", "gemstone": "Onyx"},
+    "8th": {"traditional": "Bronze", "modern": "Linens & Lace", "gemstone": "Tourmaline"},
+    "9th": {"traditional": "Pottery", "modern": "Leather", "gemstone": "Lapis Lazuli"},
+    "10th": {"traditional": "Tin / Aluminum", "modern": "Diamond Jewelry", "gemstone": "Diamond"},
+    "15th": {"traditional": "Crystal", "modern": "Watches", "gemstone": "Ruby"},
+    "20th": {"traditional": "China", "modern": "Platinum", "gemstone": "Emerald"},
+    "25th": {"traditional": "Silver", "modern": "Silver", "gemstone": "Silver"},
+    "30th": {"traditional": "Pearl", "modern": "Diamond", "gemstone": "Pearl"},
+    "40th": {"traditional": "Ruby", "modern": "Ruby", "gemstone": "Ruby"},
+    "50th": {"traditional": "Gold", "modern": "Gold", "gemstone": "Gold"},
+    "60th": {"traditional": "Diamond", "modern": "Diamond", "gemstone": "Diamond"},
 }
 
-# --- Dropdown Options ---
-RELATIONSHIPS = ["Any", "Girlfriend", "Boyfriend", "Wife", "Husband", "Mom", "Dad", "Friend", "Sister", "Brother"]
-RECIPIENTS = ["Any", "Her", "Him", "Girl", "Boy", "Couple"]
-OCCASIONS = ["Any", "Birthday", "Anniversary", "Christmas", "Valentine's Day", "Wedding", "Just Because"]
-AGES = ["Any", "Under 18", "18-24", "25-34", "35-44", "45-54", "55+"]
-PRICES = ["Any", "Under $25", "$25-$50", "$50-$100", "$100-$200", "Over $200"]
+# --- Refined Dropdowns ---
+RELATIONSHIPS = ["Any", "Wife", "Husband", "Fiancée", "Fiancé", "Girlfriend", "Boyfriend", "Mother", "Father", "Best Friend"]
+OCCASIONS = ["Any", "Anniversary", "Birthday", "Engagement", "Wedding", "Valentine’s Day", "Christmas", "Just Because"]
+AGES = ["Any", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"]
+PRICES = ["Any", "Under $25", "$25–$50", "$50–$100", "$100–$200", "Over $200"]
 
-# --- Amazon Search ---
+# --- Amazon.com Search (US) ---
 def search_amazon(query, num_results=6):
     url = f"https://www.amazon.com/s?k={urllib.parse.quote(query)}"
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -48,10 +47,10 @@ def search_amazon(query, num_results=6):
             asin = item.get("data-asin")
             if not asin: continue
             title_tag = item.select_one("h2 a")
-            title = title_tag.get_text(strip=True) if title_tag else "Gift Idea"
+            title = title_tag.get_text(strip=True) if title_tag else "Timeless Gift"
             link = f"https://www.amazon.com/dp/{asin}"
             img_tag = item.select_one("img.s-image")
-            img = img_tag["src"] if img_tag and img_tag.get("src") else "https://via.placeholder.com/300x300.png?text=Gift"
+            img = img_tag["src"] if img_tag and img_tag.get("src") else "https://via.placeholder.com/400x400.png?text=Heart"
             price = ""
             sym = item.select_one("span.a-price-symbol")
             whole = item.select_one("span.a-price-whole")
@@ -61,82 +60,86 @@ def search_amazon(query, num_results=6):
             if frac: price += frac.get_text(strip=True)
             price = price or "View price"
             rating_tag = item.select_one("span.a-icon-alt")
-            rating = rating_tag.get_text(strip=True).split(" out")[0] if rating_tag else "N/A"
+            rating = rating_tag.get_text(strip=True).split(" out")[0] if rating_tag else "New"
             products.append({"title": title, "link": link, "image": img, "price": price, "rating": rating})
-        return products or [{"title": "More gifts", "link": url, "image": "https://via.placeholder.com/300x300.png?text=See+More", "price": "View all", "rating": "N/A"}]
+        return products or [{"title": "More beautiful gifts", "link": url, "image": "https://via.placeholder.com/400x400.png?text=See+More", "price": "Explore", "rating": ""}]
     except:
-        return [{"title": "Explore on Amazon", "link": "https://www.amazon.com", "image": "https://via.placeholder.com/300x300.png?text=Gift", "price": "Open", "rating": "N/A"}]
+        return [{"title": "Shop on Amazon", "link": "https://www.amazon.com", "image": "https://via.placeholder.com/400x400.png?text=Heart", "price": "Discover", "rating": ""}]
 
-# --- UI ---
-st.title("Gift Gimme Gift Ideas")
-st.markdown("### _The perfect gift is just one click away._")
+# --- Elegant Styling ---
+st.markdown("""
+<style>
+    .big-font {font-size: 48px !important; font-family: 'Playfair Display', serif; color: #5D4037; text-align: center;}
+    .sub-font {font-size: 22px !important; font-family: 'Crimson Text', serif; color: #6D4C41; text-align: center;}
+    .css-1v0mbdj {background-color: #FFF8F0;}
+    small {color: #8D6E63;}
+</style>
+""", unsafe_allow_html=True)
 
-# Anniversary Special Section
-st.markdown("### Anniversary Gift? Select Year & Theme")
-anniv_year = st.selectbox("Anniversary Year", options=list(ANNIVERSARIES.keys()), index=0)
+st.markdown('<p class="big-font">Timeless Gift Ideas</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-font">Curated with love for every milestone and moment</p>', unsafe_allow_html=True)
+
+st.markdown("### Anniversary Celebration")
+anniv_year = st.selectbox("Select Your Anniversary Year", options=list(ANNIVERSARIES.keys()), index=0)
 
 if anniv_year != "Any Year":
     trad = ANNIVERSARIES[anniv_year]["traditional"]
     mod = ANNIVERSARIES[anniv_year]["modern"]
-    col1, col2 = st.columns(2)
+    gem = ANNIVERSARIES[anniv_year]["gemstone"]
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.info(f"**Traditional:** {trad}")
+        st.markdown(f"<strong>Traditional</strong><br>{trad}", unsafe_allow_html=True)
     with col2:
-        st.info(f"**Modern:** {mod}")
-    theme_choice = st.radio("Gift Theme", ["Traditional", "Modern", "Both"], horizontal=True)
+        st.markdown(f"<strong>Modern</strong><br>{mod}", unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"<strong>Gemstone</strong><br>{gem}", unsafe_allow_html=True)
+    theme_choice = st.radio("Theme Preference", ["Traditional", "Modern", "Gemstone", "All"], horizontal=True, label_visibility="collapsed")
 else:
-    trad = mod = ""
-    theme_choice = "Both"
+    theme_choice = "All"
 
-st.markdown("### Or Use Advanced Filters")
+st.markdown("### Refine Your Search")
 col1, col2 = st.columns(2)
 with col1:
-    relationship = st.selectbox("Relationship", RELATIONSHIPS, index=0)
-    recipient = st.selectbox("Recipient", RECIPIENTS, index=0)
-with col2:
+    relationship = st.selectbox("For Whom", RELATIONSHIPS, index=0)
     occasion = st.selectbox("Occasion", OCCASIONS, index=0)
-    age = st.selectbox("Age", AGES, index=0)
+with col2:
+    age = st.selectbox("Age Group", AGES, index=0)
+    price = st.selectbox("Budget", PRICES, index=0)
 
-price = st.selectbox("Price Range", PRICES, index=0)
-
-if st.button("Find Perfect Gifts", use_container_width=True, type="primary"):
-    with st.spinner("Finding the best gifts just for you..."):
+if st.button("Discover Gifts", use_container_width=True, type="primary"):
+    with st.spinner("Curating exquisite gifts for you..."):
         query_parts = []
-
-        # Anniversary priority
         if anniv_year != "Any Year":
-            query_parts.append(anniv_year)
-            query_parts.append("anniversary")
+            query_parts.append(f"{anniv_year} anniversary")
             if theme_choice == "Traditional":
                 query_parts.append(trad)
             elif theme_choice == "Modern":
                 query_parts.append(mod)
+            elif theme_choice == "Gemstone":
+                query_parts.append(gem)
             else:
-                query_parts.extend([trad, mod])
-
-        # Other filters
+                query_parts.extend([trad, mod, gem])
         if relationship != "Any": query_parts.append(relationship)
-        if recipient != "Any": query_parts.append(recipient)
         if occasion != "Any" and occasion != "Anniversary": query_parts.append(occasion)
-        if age != "Any": query_parts.append(age.replace("+", " and over"))
+        if age != "Any": query_parts.append(age)
         if price != "Any": query_parts.append(price)
-
         query_parts.append("gift")
         query = " ".join(query_parts)
-        st.session_state.results = search_amazon(query, 9)
+        st.session_state.results = search_amazon(query, 6)
 
-# --- Results ---
+# --- Elegant Results ---
 if "results" in st.session_state:
-    st.success(f"Here are **9 perfect gift ideas** just for you!")
+    st.markdown("### Your Curated Selection")
+    st.markdown("<em>Timeless treasures chosen just for you</em>", unsafe_allow_html=True)
     cols = st.columns(3)
     for i, p in enumerate(st.session_state.results):
         with cols[i % 3]:
             st.image(p["image"], width="stretch")
-            st.markdown(f"**{p['title'][:70]}...**")
-            st.caption(f"Rating: {p['rating']} • {p['price']}")
-            st.markdown(f"[View on Amazon]({p['link']})")
+            st.markdown(f"**{p['title'][:80]}...**")
+            st.markdown(f"<small>Rating: {p['rating']} • {p['price']}</small>", unsafe_allow_html=True)
+            st.markdown(f"[View Details]({p['link']})")
 
-    st.info("Tip: Change any filter and search again for fresh ideas!")
+    st.markdown("<br><small>Tip: Adjust any filter above for a fresh collection of ideas.</small>", unsafe_allow_html=True)
 
 st.markdown("---")
-st.caption("Made with love by Grok • Inspired by gimmegiftideas.com • Updated November 13, 2025")
+st.caption("Crafted with elegance by Grok • Inspired by Hitched.co.uk • November 13, 2025")
