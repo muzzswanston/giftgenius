@@ -1,57 +1,57 @@
-# app.py - GiftGenius Pro (Future-Proof, No Warnings)
+# app.py - Gimme Gift Ideas + Anniversary Themes (Pro Version)
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
 
-st.set_page_config(page_title="GiftGenius Pro", page_icon="Gift", layout="wide")
+st.set_page_config(page_title="Gimme Gift Ideas", page_icon="Gift", layout="centered")
 
 # --- Anniversary Themes ---
 ANNIVERSARIES = {
-    1: {"traditional": "Paper", "modern": "Clocks"},
-    2: {"traditional": "Cotton", "modern": "China"},
-    3: {"traditional": "Leather", "modern": "Crystal/Glass"},
-    4: {"traditional": "Fruit/Flowers", "modern": "Appliances"},
-    5: {"traditional": "Wood", "modern": "Silverware"},
-    6: {"traditional": "Iron", "modern": "Wood"},
-    7: {"traditional": "Copper/Wool", "modern": "Desk Sets"},
-    8: {"traditional": "Bronze/Pottery", "modern": "Linen/Lace"},
-    9: {"traditional": "Willow/Pottery", "modern": "Leather"},
-    10: {"traditional": "Aluminum/Tin", "modern": "Diamond Jewelry"},
-    15: {"traditional": "Crystal", "modern": "Watches"},
-    20: {"traditional": "China", "modern": "Platinum"},
-    25: {"traditional": "Silver", "modern": "Silver"},
-    30: {"traditional": "Pearl", "modern": "Diamond"},
-    40: {"traditional": "Ruby", "modern": "Ruby"},
-    50: {"traditional": "Gold", "modern": "Gold"},
-    60: {"traditional": "Diamond", "modern": "Diamond"},
+    "Any Year": {"traditional": "", "modern": ""},
+    "1st": {"traditional": "Paper", "modern": "Clocks"},
+    "2nd": {"traditional": "Cotton", "modern": "China"},
+    "3rd": {"traditional": "Leather", "modern": "Crystal/Glass"},
+    "4th": {"traditional": "Fruit/Flowers", "modern": "Appliances"},
+    "5th": {"traditional": "Wood", "modern": "Silverware"},
+    "6th": {"traditional": "Iron", "modern": "Wood"},
+    "7th": {"traditional": "Copper/Wool", "modern": "Desk Sets"},
+    "8th": {"traditional": "Bronze/Pottery", "modern": "Linen/Lace"},
+    "9th": {"traditional": "Willow/Pottery", "modern": "Leather"},
+    "10th": {"traditional": "Aluminum/Tin", "modern": "Diamond Jewelry"},
+    "15th": {"traditional": "Crystal", "modern": "Watches"},
+    "20th": {"traditional": "China", "modern": "Platinum"},
+    "25th": {"traditional": "Silver", "modern": "Silver"},
+    "30th": {"traditional": "Pearl", "modern": "Diamond"},
+    "40th": {"traditional": "Ruby", "modern": "Ruby"},
+    "50th": {"traditional": "Gold", "modern": "Gold"},
+    "60th": {"traditional": "Diamond", "modern": "Diamond"},
 }
 
-def search_amazon(query, num_results=5):
+# --- Dropdown Options ---
+RELATIONSHIPS = ["Any", "Girlfriend", "Boyfriend", "Wife", "Husband", "Mom", "Dad", "Friend", "Sister", "Brother"]
+RECIPIENTS = ["Any", "Her", "Him", "Girl", "Boy", "Couple"]
+OCCASIONS = ["Any", "Birthday", "Anniversary", "Christmas", "Valentine's Day", "Wedding", "Just Because"]
+AGES = ["Any", "Under 18", "18-24", "25-34", "35-44", "45-54", "55+"]
+PRICES = ["Any", "Under $25", "$25-$50", "$50-$100", "$100-$200", "Over $200"]
+
+# --- Amazon Search ---
+def search_amazon(query, num_results=6):
     url = f"https://www.amazon.com/s?k={urllib.parse.quote(query)}"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept-Language": "en-US,en;q=0.9"
-    }
+    headers = {"User-Agent": "Mozilla/5.0"}
     try:
         r = requests.get(url, headers=headers, timeout=20)
-        r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
         items = soup.select('div[data-component-type="s-search-result"]')[:num_results]
         products = []
         for item in items:
             asin = item.get("data-asin")
-            if not asin:
-                continue
-
+            if not asin: continue
             title_tag = item.select_one("h2 a")
-            title = title_tag.get_text(strip=True) if title_tag else "Great Gift Idea"
-
+            title = title_tag.get_text(strip=True) if title_tag else "Gift Idea"
             link = f"https://www.amazon.com/dp/{asin}"
-
             img_tag = item.select_one("img.s-image")
             img = img_tag["src"] if img_tag and img_tag.get("src") else "https://via.placeholder.com/300x300.png?text=Gift"
-
             price = ""
             sym = item.select_one("span.a-price-symbol")
             whole = item.select_one("span.a-price-whole")
@@ -60,90 +60,83 @@ def search_amazon(query, num_results=5):
             if whole: price += whole.get_text(strip=True)
             if frac: price += frac.get_text(strip=True)
             price = price or "View price"
-
             rating_tag = item.select_one("span.a-icon-alt")
             rating = rating_tag.get_text(strip=True).split(" out")[0] if rating_tag else "N/A"
-
-            products.append({
-                "title": title,
-                "link": link,
-                "image": img,
-                "price": price,
-                "rating": rating
-            })
-
-        if not products:
-            products = [{
-                "title": f"More {query} gifts on Amazon",
-                "link": url,
-                "image": "https://via.placeholder.com/300x300.png?text=See+More",
-                "price": "View all",
-                "rating": "N/A"
-            }]
-        return products
-
-    except Exception:
-        return [{
-            "title": "Explore gifts on Amazon",
-            "link": "https://www.amazon.com",
-            "image": "https://via.placeholder.com/300x300.png?text=Gifts",
-            "price": "Open Amazon",
-            "rating": "N/A"
-        }]
+            products.append({"title": title, "link": link, "image": img, "price": price, "rating": rating})
+        return products or [{"title": "More gifts", "link": url, "image": "https://via.placeholder.com/300x300.png?text=See+More", "price": "View all", "rating": "N/A"}]
+    except:
+        return [{"title": "Explore on Amazon", "link": "https://www.amazon.com", "image": "https://via.placeholder.com/300x300.png?text=Gift", "price": "Open", "rating": "N/A"}]
 
 # --- UI ---
-st.title("GiftGenius Pro")
-st.markdown("### Find the perfect wedding anniversary gift in seconds")
+st.title("Gift Gimme Gift Ideas")
+st.markdown("### _The perfect gift is just one click away._")
 
-with st.sidebar:
-    st.header("Settings")
-    year = st.number_input("Anniversary Year", min_value=1, max_value=70, value=10, step=1)
-    num = st.slider("Gifts per theme", 3, 8, 5)
+# Anniversary Special Section
+st.markdown("### Anniversary Gift? Select Year & Theme")
+anniv_year = st.selectbox("Anniversary Year", options=list(ANNIVERSARIES.keys()), index=0)
 
-theme_data = ANNIVERSARIES.get(year, {"traditional": "Special Gift", "modern": "Special Gift"})
-trad = theme_data["traditional"]
-mod = theme_data["modern"]
+if anniv_year != "Any Year":
+    trad = ANNIVERSARIES[anniv_year]["traditional"]
+    mod = ANNIVERSARIES[anniv_year]["modern"]
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info(f"**Traditional:** {trad}")
+    with col2:
+        st.info(f"**Modern:** {mod}")
+    theme_choice = st.radio("Gift Theme", ["Traditional", "Modern", "Both"], horizontal=True)
+else:
+    trad = mod = ""
+    theme_choice = "Both"
 
-st.success(f"**{year}th Anniversary** – Traditional: **{trad}** | Modern: **{mod}**")
-
-# Auto-load when year changes
-if "last_year" not in st.session_state or year != st.session_state.last_year:
-    st.session_state.last_year = year
-    st.session_state.pop("trad", None)
-    st.session_state.pop("mod", None)
-
+st.markdown("### Or Use Advanced Filters")
 col1, col2 = st.columns(2)
 with col1:
-    if st.button("Traditional Gifts", use_container_width=True) or "trad" not in st.session_state:
-        with st.spinner("Finding traditional gifts..."):
-            st.session_state.trad = search_amazon(f"{year}th anniversary {trad} gift", num)
-
+    relationship = st.selectbox("Relationship", RELATIONSHIPS, index=0)
+    recipient = st.selectbox("Recipient", RECIPIENTS, index=0)
 with col2:
-    if st.button("Modern Gifts", use_container_width=True) or "mod" not in st.session_state:
-        with st.spinner("Finding modern gifts..."):
-            st.session_state.mod = search_amazon(f"{year}th anniversary {mod} gift", num)
+    occasion = st.selectbox("Occasion", OCCASIONS, index=0)
+    age = st.selectbox("Age", AGES, index=0)
 
-# Display Traditional
-if "trad" in st.session_state:
-    st.subheader(f"Traditional Gifts – {trad}")
-    cols = st.columns(4)
-    for i, p in enumerate(st.session_state.trad):
-        with cols[i % 4]:
-            st.image(p["image"], width="stretch")  # Future-proof!
-            st.markdown(f"**{p['title'][:80]}...**")
+price = st.selectbox("Price Range", PRICES, index=0)
+
+if st.button("Find Perfect Gifts", use_container_width=True, type="primary"):
+    with st.spinner("Finding the best gifts just for you..."):
+        query_parts = []
+
+        # Anniversary priority
+        if anniv_year != "Any Year":
+            query_parts.append(anniv_year)
+            query_parts.append("anniversary")
+            if theme_choice == "Traditional":
+                query_parts.append(trad)
+            elif theme_choice == "Modern":
+                query_parts.append(mod)
+            else:
+                query_parts.extend([trad, mod])
+
+        # Other filters
+        if relationship != "Any": query_parts.append(relationship)
+        if recipient != "Any": query_parts.append(recipient)
+        if occasion != "Any" and occasion != "Anniversary": query_parts.append(occasion)
+        if age != "Any": query_parts.append(age.replace("+", " and over"))
+        if price != "Any": query_parts.append(price)
+
+        query_parts.append("gift")
+        query = " ".join(query_parts)
+        st.session_state.results = search_amazon(query, 9)
+
+# --- Results ---
+if "results" in st.session_state:
+    st.success(f"Here are **9 perfect gift ideas** just for you!")
+    cols = st.columns(3)
+    for i, p in enumerate(st.session_state.results):
+        with cols[i % 3]:
+            st.image(p["image"], width="stretch")
+            st.markdown(f"**{p['title'][:70]}...**")
             st.caption(f"Rating: {p['rating']} • {p['price']}")
             st.markdown(f"[View on Amazon]({p['link']})")
 
-# Display Modern
-if "mod" in st.session_state:
-    st.subheader(f"Modern Gifts – {mod}")
-    cols = st.columns(4)
-    for i, p in enumerate(st.session_state.mod):
-        with cols[i % 4]:
-            st.image(p["image"], width="stretch")  # Future-proof!
-            st.markdown(f"**{p['title'][:80]}...**")
-            st.caption(f"Rating: {p['rating']} • {p['price']}")
-            st.markdown(f"[View on Amazon]({p['link']})")
+    st.info("Tip: Change any filter and search again for fresh ideas!")
 
 st.markdown("---")
-st.caption("Made with love by Grok • Updated November 13, 2025")
+st.caption("Made with love by Grok • Inspired by gimmegiftideas.com • Updated November 13, 2025")
