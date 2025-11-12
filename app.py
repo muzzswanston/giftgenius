@@ -1,12 +1,13 @@
-# app.py - Wedding Anniversary Gift Suggester with Streamlit GUI
-# Run with: streamlit run app.py
+# app.py - Wedding Anniversary Gift Suggester PRO (with images, prices & ratings)
+# Run: streamlit run app.py
 
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
+import re
 
-# --- Anniversary Themes (Traditional + Modern) ---
+# --- Anniversary Themes ---
 ANNIVERSARIES = {
     1: {"traditional": "Paper", "modern": "Clocks"},
     2: {"traditional": "Cotton", "modern": "China"},
@@ -27,93 +28,136 @@ ANNIVERSARIES = {
     60: {"traditional": "Diamond", "modern": "Diamond"},
 }
 
-# --- Amazon Search Function ---
+# --- Enhanced Amazon Search with Image, Price & Rating ---
 def search_amazon(query, tag, num_results=5):
-    """Scrape Amazon search results and return title + affiliate link."""
-    if not query:
-        return []
     url = f"https://www.amazon.com/s?k={urllib.parse.quote(query)}"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept-Language": "en-US,en;q=0.9"
     }
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
-        results = soup.find_all("div", {"data-component-type": "s-search-result"})[:num_results]
+        items = soup.find_all("div", {"data-component-type": "s-search-result"})[:num_results]
         products = []
-        for item in results:
+        for item in items:
             asin = item.get("data-asin")
             if not asin:
                 continue
+
+            # Title
             title_tag = item.find("h2")
             title = title_tag.get_text(strip=True) if title_tag else "No title"
+
+            # Link
             link = f"https://www.amazon.com/dp/{asin}/?tag={tag}"
-            products.append({"title": title, "link": link})
-        return products or [{"title": "No results found. Try another search.", "link": "#"}]
+
+            # Image
+            img_tag = item.find("img", {"class": "s-image"})
+            img = img_tag["src"] if img_tag else "https://via.placeholder.com/300x300.png?text=No+Image"
+
+            # Price
+            price_whole = item.find("span", {"class": "a-price-whole"})
+            price_frac = item.find("span", {"class": "a-price-fraction"})
+            price_sym = item.find("span", {"class": "a-price-symbol"})
+            price = "".join([price_sym.get_text() if price_sym else "$",
+                            price_whole.get_text() if price_whole else "",
+                            price_frac.get_text() if price_frac else "00"]) if price_whole else "Price not available"
+
+            # Rating
+            rating_tag = item.find("span", {"class": "a-icon-alt"})
+            rating = rating_tag.get_text(strip=True).split()[0] if rating_tag else "N/A"
+
+            products.append({
+                "title": title,
+                "link": link,
+                "image": img,
+                "price": price,
+                "rating": rating
+            })
+        return products if products else [{"title": "No results found.", "link": "#", "image": "", "price": "", "rating": ""}]
     except Exception as e:
-        return [{"title": f"Error: {str(e)}", "link": "#"}]
+        return [{"title": f"Error: {str(e)}", "link": "#", "image": "", "price": "", "rating": ""}]
 
 # --- Streamlit App ---
-st.set_page_config(page_title="Anniversary Gift Finder", page_icon="💍", layout="centered")
+st.set_page_config(page_title="GiftGenius Pro", page_icon="💎", layout="wide")
 
-st.title("💍 Wedding Anniversary Gift Suggester")
-st.markdown("### Get perfect gift ideas + earn Amazon commissions instantly!")
+st.title("💍 GiftGenius Pro – Anniversary Gift Finder")
+st.markdown("### Instant gift ideas + Amazon affiliate links with **your tag**")
 
-# Sidebar inputs
+# Sidebar
 with st.sidebar:
-    st.header("Your Settings")
-    affiliate_tag = st.text_input("Amazon Associates Tag", value="ssbudge604-22", help="e.g., yourname-20")
-    year = st.number_input("Anniversary Year", min_value=1, max_value=70, value=5, step=1)
+    st.header("⚙️ Settings")
+    affiliate_tag = st.text_input("Your Amazon Tag", value="ssbudge604-22", help="e.g., yourname-20")
+    year = st.number_input("Anniversary Year", min_value=1, max_value=70, value=10, step=1)
+    num_gifts = st.slider("Gifts per theme", 3, 8, 5)
 
-# Main content
+# Theme display
 if year in ANNIVERSARIES:
     trad = ANNIVERSARIES[year]["traditional"]
     mod = ANNIVERSARIES[year]["modern"]
-    st.success(f"**{year}th Anniversary**")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.info(f"**Traditional:** {trad}")
-    with col2:
-        st.info(f"**Modern:** {mod}")
+    st.success(f"**{year}th Anniversary** – Traditional: **{trad}** | Modern: **{mod}**")
 else:
-    st.warning(f"No standard theme for year {year}. Using general anniversary searches.")
+    st.warning(f"No standard theme for year {year}. Using general searches.")
     trad = mod = "Anniversary Gift"
 
-# Search queries
-query_trad = f"{year}th wedding anniversary {trad} gift"
-query_mod = f"{year}th wedding anniversary {mod} gift"
+# Auto-search when year changes
+if "last_year" not in st.session_state:
+    st.session_state.last_year = year
+
+if year != st.session_state.last_year:
+    st.session_state.last_year = year
+    st.session_state.clear_results = True
 
 # Search buttons
 col1, col2 = st.columns(2)
 with col1:
-    if st.button(f"Find Traditional Gifts ({trad})", use_container_width=True):
-        with st.spinner("Searching Amazon..."):
-            trad_products = search_amazon(query_trad, affiliate_tag)
-        st.session_state.trad_results = trad_products
+    if st.button(f"🔍 Traditional Gifts ({trad})", use_container_width=True) or st.session_state.get("clear_results"):
+        with st.spinner("Searching Amazon for traditional gifts..."):
+            st.session_state.trad_results = search_amazon(f"{year}th anniversary {trad} gift", affiliate_tag, num_gifts)
+        st.session_state.clear_results = False
 
 with col2:
-    if st.button(f"Find Modern Gifts ({mod})", use_container_width=True):
-        with st.spinner("Searching Amazon..."):
-            mod_products = search_amazon(query_mod, affiliate_tag)
-        st.session_state.mod_results = mod_products
+    if st.button(f"🔍 Modern Gifts ({mod})", use_container_width=True) or st.session_state.get("clear_results"):
+        with st.spinner("Searching Amazon for modern gifts..."):
+            st.session_state.mod_results = search_amazon(f"{year}th anniversary {mod} gift", affiliate_tag, num_gifts)
+        st.session_state.clear_results = False
 
-# Display results if available
+# Display results
 if "trad_results" in st.session_state:
-    st.subheader(f"Traditional Gifts – {trad}")
-    for i, prod in enumerate(st.session_state.trad_results, 1):
-        st.markdown(f"**{i}.** [{prod['title']}]({prod['link']})")
+    st.subheader(f"🎁 Traditional – {trad}")
+    cols = st.columns(min(len(st.session_state.trad_results), 4))
+    for idx, prod in enumerate(st.session_state.trad_results):
+        with cols[idx % 4]:
+            if prod["image"]:
+                st.image(prod["image"], use_column_width=True)
+            st.markdown(f"**{prod['title'][:80]}...**")
+            if prod["rating"] != "N/A":
+                st.markdown(f"⭐ **{prod['rating']}** • **{prod['price']}**")
+            else:
+                st.markdown(f"**{prod['price']}**")
+            st.markdown(f"[🛒 Buy Now]({prod['link']})")
 
 if "mod_results" in st.session_state:
-    st.subheader(f"Modern Gifts – {mod}")
-    for i, prod in enumerate(st.session_state.mod_results, 1):
-        st.markdown(f"**{i}.** [{prod['title']}]({prod['link']})")
+    st.subheader(f"💎 Modern – {mod}")
+    cols = st.columns(min(len(st.session_state.mod_results), 4))
+    for idx, prod in enumerate(st.session_state.mod_results):
+        with cols[idx % 4]:
+            if prod["image"]:
+                st.image(prod["image"], use_column_width=True)
+            st.markdown(f"**{prod['title'][:80]}...**")
+            if prod["rating"] != "N/A":
+                st.markdown(f"⭐ **{prod['rating']}** • **{prod['price']}**")
+            else:
+                st.markdown(f"**{prod['price']}**")
+            st.markdown(f"[Buy Now]({prod['link']})")
 
 # Footer
 st.markdown("---")
-st.caption("Made with ❤️ by Grok • All links contain your affiliate tag • Live Amazon data as of November 12, 2025")
+st.caption("Made with ❤️ by Grok • All links include your affiliate tag • Live Amazon data • Deploy free on [Streamlit Cloud](https://share.streamlit.io)")
 
-# Optional: Auto-search on load (uncomment if you want)
-// if st.session_state.get("first_run", True):
-//     st.session_state.first_run = False
-//     st.rerun()
+# Auto-run on first load
+if "first_run" not in st.session_state:
+    st.session_state.first_run = False
+    st.rerun()
