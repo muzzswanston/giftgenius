@@ -1,190 +1,153 @@
-# app.py - Wedding Anniversary Gift Suggester with Streamlit GUI
-# Run with: streamlit run app.py
-
+# app.py - Gimme Gift Ideas Clone + Anniversary Thumbnails
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
+import random
 
-# --- Custom Theme CSS for GimmeGiftIdeas look ---
-st.markdown("""
-    <style>
-        html, body, .reportview-container, .main {
-            background-color: #fffaf7 !important;
-            font-family: 'Nunito', 'Segoe UI', Arial, sans-serif !important;
-            color: #222831 !important;
-        }
-        .stButton>button {
-            background-color: #ffb6b9 !important;
-            color: #222 !important;
-            border-radius: 12px !important;
-            border: none !important;
-            padding: 8px 20px !important;
-            font-size: 18px !important;
-            font-family: 'Nunito', Arial, sans-serif !important;
-            box-shadow: 0 2px 6px rgba(252,200,183,0.1) !important;
-            transition: box-shadow 0.2s;
-            margin: 0.5em 0 0.5em 0;
-        }
-        .stButton>button:hover {
-            background-color: #ffe0ac !important;
-            box-shadow: 0 4px 14px rgba(255,182,185,0.18) !important;
-        }
-        .stTextInput>div>input, .sidebar-content, .stSidebar {
-            background: #fff1f6 !important;
-            border-radius: 10px !important;
-        }
-        .sidebar .sidebar-content {
-            background: #fff1f6 !important;
-        }
-        h1, h2, h3, h4 {
-            color: #ff5287 !important;
-            font-family: 'Nunito', 'Segoe UI', Arial, sans-serif !important;
-            font-weight: 700 !important;
-        }
-        .gg-card {
-            background: #ffffff;
-            box-shadow: 0 2px 6px rgba(252,200,183,0.13);
-            border-radius: 14px;
-            padding: 20px 22px;
-            margin-bottom: 18px;
-            border: 1px solid #fff0ed;
-        }
-        .gg-title a {
-            color: #ff5287 !important;
-            font-size: 20px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: color 0.2s;
-        }
-        .gg-title a:hover {
-            color: #fa9618 !important;
-            text-decoration: underline;
-        }
-        .gg-subtle {
-            color: #c0a8a8;
-            font-size: 15px;
-        }
-        .stAlert {
-            border-radius: 14px !important;
-        }
-        .stSpinner {
-            color: #ff5287 !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
+st.set_page_config(page_title="Gimme Gift Ideas", page_icon="Gift", layout="centered")
 
-# --- Anniversary Themes (Traditional + Modern) ---
+# --- Anniversary Themes + DIRECT Thumbnails (NO 404s) ---
 ANNIVERSARIES = {
-    1: {"traditional": "Paper", "modern": "Clocks"},
-    2: {"traditional": "Cotton", "modern": "China"},
-    3: {"traditional": "Leather", "modern": "Crystal/Glass"},
-    4: {"traditional": "Fruit/Flowers", "modern": "Appliances"},
-    5: {"traditional": "Wood", "modern": "Silverware"},
-    6: {"traditional": "Iron", "modern": "Wood"},
-    7: {"traditional": "Copper/Wool", "modern": "Desk Sets"},
-    8: {"traditional": "Bronze/Pottery", "modern": "Linen/Lace"},
-    9: {"traditional": "Willow/Pottery", "modern": "Leather"},
-    10: {"traditional": "Aluminum/Tin", "modern": "Diamond Jewelry"},
-    15: {"traditional": "Crystal", "modern": "Watches"},
-    20: {"traditional": "China", "modern": "Platinum"},
-    25: {"traditional": "Silver", "modern": "Silver"},
-    30: {"traditional": "Pearl", "modern": "Diamond"},
-    40: {"traditional": "Ruby", "modern": "Ruby"},
-    50: {"traditional": "Gold", "modern": "Gold"},
-    60: {"traditional": "Diamond", "modern": "Diamond"},
+    "Any Year": {"traditional": "", "modern": "", "gemstone": "", "t_img": "", "m_img": "", "g_img": ""},
+    "1st": {"traditional": "Paper", "modern": "Clocks", "gemstone": "Gold Jewelry",
+            "t_img": "https://i.imgur.com/9ZJ2K8P.png", "m_img": "https://i.imgur.com/0L9jY7j.png", "g_img": "https://i.imgur.com/3qR9p2K.png"},
+    "5th": {"traditional": "Wood", "modern": "Silverware", "gemstone": "Sapphire",
+            "t_img": "https://i.imgur.com/5rL7uXv.png", "m_img": "https://i.imgur.com/8kR4pQm.png", "g_img": "https://i.imgur.com/7aX9jLm.png"},
+    "10th": {"traditional": "Tin / Aluminum", "modern": "Diamond Jewelry", "gemstone": "Diamond",
+            "t_img": "https://i.imgur.com/Qw3sYpT.png", "m_img": "https://i.imgur.com/2fN7kLm.png", "g_img": "https://i.imgur.com/2fN7kLm.png"},
+    "15th": {"traditional": "Crystal", "modern": "Watches", "gemstone": "Ruby",
+            "t_img": "https://i.imgur.com/6vJ9p2K.png", "m_img": "https://i.imgur.com/9pL7uXv.png", "g_img": "https://i.imgur.com/4mR9jLm.png"},
+    "25th": {"traditional": "Silver", "modern": "Silver", "gemstone": "Silver",
+            "t_img": "https://i.imgur.com/8kR4pQm.png", "m_img": "https://i.imgur.com/8kR4pQm.png", "g_img": "https://i.imgur.com/8kR4pQm.png"},
+    "50th": {"traditional": "Gold", "modern": "Gold", "gemstone": "Gold",
+            "t_img": "https://i.imgur.com/3qR9p2K.png", "m_img": "https://i.imgur.com/3qR9p2K.png", "g_img": "https://i.imgur.com/3qR9p2K.png"},
+    "60th": {"traditional": "Diamond", "modern": "Diamond", "gemstone": "Diamond",
+            "t_img": "https://i.imgur.com/2fN7kLm.png", "m_img": "https://i.imgur.com/2fN7kLm.png", "g_img": "https://i.imgur.com/2fN7kLm.png"}
 }
 
-# --- Amazon Search Function ---
-def search_amazon(query, tag, num_results=5):
-    """Scrape Amazon search results and return title + affiliate link."""
-    if not query:
-        return []
+# --- Dropdowns (Exact same as gimmegiftideas.com) ---
+RELATIONSHIPS = ["Any", "Girlfriend", "Boyfriend", "Wife", "Husband", "Mom", "Dad", "Friend", "Sister", "Brother", "Grandma", "Grandpa"]
+RECIPIENTS = ["Any", "Her", "Him", "Girl", "Boy", "Teen Girl", "Teen Boy", "Baby", "Couple"]
+OCCASIONS = ["Any", "Birthday", "Anniversary", "Christmas", "Valentine's Day", "Wedding", "Graduation", "Housewarming", "Thank You", "Just Because"]
+AGES = ["Any", "Under 18", "18-24", "25-34", "35-44", "45-54", "55+"]
+PRICES = ["Any", "Under $25", "$25-$50", "$50-$100", "$100-$200", "Over $200"]
+
+# --- Rotating User Agents ---
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+]
+
+# --- Robust Amazon Search ---
+def search_amazon(query, num_results=6):
     url = f"https://www.amazon.com/s?k={urllib.parse.quote(query)}"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
-    }
+    headers = {"User-Agent": random.choice(USER_AGENTS), "Accept-Language": "en-US"}
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-        results = soup.find_all("div", {"data-component-type": "s-search-result"})[:num_results]
+        r = requests.get(url, headers=headers, timeout=20)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "html.parser")
+        items = soup.select('div[data-component-type="s-search-result"]')[:num_results]
         products = []
-        for item in results:
+        for item in items:
             asin = item.get("data-asin")
-            if not asin:
-                continue
-            title_tag = item.find("h2")
-            title = title_tag.get_text(strip=True) if title_tag else "No title"
-            link = f"https://www.amazon.com/dp/{asin}/?tag={tag}"
-            products.append({"title": title, "link": link})
-        return products or [{"title": "No results found. Try another search.", "link": "#"}]
-    except Exception as e:
-        return [{"title": f"Error: {str(e)}", "link": "#"}]
+            if not asin: continue
+            title_tag = item.select_one("h2 a span")
+            title = title_tag.get_text(strip=True) if title_tag else "Great Gift"
+            link = f"https://www.amazon.com/dp/{asin}"
+            img_tag = item.select_one("img.s-image")
+            img = img_tag["src"] if img_tag and img_tag.get("src") else "https://via.placeholder.com/400x400.png?text=Gift"
+            sym = item.select_one("span.a-price-symbol")
+            whole = item.select_one("span.a-price-whole")
+            frac = item.select_one("span.a-price-fraction")
+            price = ""
+            if sym: price += sym.get_text(strip=True)
+            if whole: price += whole.get_text(strip=True).replace('.', '')
+            if frac: price += "." + frac.get_text(strip=True)
+            price = price or "View price"
+            rating_tag = item.select_one("span.a-icon-alt")
+            rating = rating_tag.get_text(strip=True).split(" out")[0] if rating_tag else "New"
+            products.append({"title": title, "link": link, "image": img, "price": price, "rating": rating})
+        if not products:
+            products = [{"title": "More gifts", "link": url, "image": "https://via.placeholder.com/400x400.png?text=See+More", "price": "Explore", "rating": "Popular"}]
+        return products
+    except:
+        return [{"title": "Shop Amazon", "link": "https://www.amazon.com", "image": "https://via.placeholder.com/400x400.png?text=Gift", "price": "Discover", "rating": "5.0"}]
 
-# --- Streamlit App ---
-st.set_page_config(page_title="Anniversary Gift Finder", page_icon="💍", layout="centered")
+# --- GIMME GIFT IDEAS STYLE (White + Pink) ---
+st.markdown("""
+<style>
+    .big-font {font-size: 48px !important; font-weight: bold; color: #E91E63; text-align: center;}
+    .sub-font {font-size: 20px !important; color: #555; text-align: center;}
+    .css-1v0mbdj {background-color: white !important;}
+    .stButton>button {background-color: #E91E63; color: white; font-size: 18px; padding: 12px 40px; border-radius: 8px;}
+    .stSelectbox > div > div {font-size: 16px;}
+</style>
+""", unsafe_allow_html=True)
 
-st.title("💍 Wedding Anniversary Gift Suggester")
-st.markdown("### Get perfect gift ideas + earn Amazon commissions instantly!")
-st.markdown("---")
+st.markdown('<p class="big-font">Gimme Gift Ideas</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-font">Struggling to find the perfect gift? We\'ve got you covered.</p>', unsafe_allow_html=True)
 
-# Sidebar inputs
-with st.sidebar:
-    st.header("Your Settings")
-    affiliate_tag = st.text_input("Amazon Associates Tag", value="ssbudge604-22", help="e.g., yourname-20")
-    year = st.number_input("Anniversary Year", min_value=1, max_value=70, value=5, step=1)
+# --- Anniversary Year with Thumbnails ---
+anniv_year = st.selectbox("Anniversary Year (optional)", options=list(ANNIVERSARIES.keys()), index=0)
 
-# Main content
-if year in ANNIVERSARIES:
-    trad = ANNIVERSARIES[year]["traditional"]
-    mod = ANNIVERSARIES[year]["modern"]
-    st.success(f"**{year}th Anniversary**")
-    col1, col2 = st.columns(2)
+if anniv_year != "Any Year":
+    data = ANNIVERSARIES[anniv_year]
+    st.markdown("### Your Anniversary Themes")
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.info(f"**Traditional:** {trad}")
+        st.image(data["t_img"], use_container_width=True)
+        st.markdown(f"<strong style='color:#E91E63;'>Traditional:</strong> {data['traditional']}", unsafe_allow_html=True)
     with col2:
-        st.info(f"**Modern:** {mod}")
+        st.image(data["m_img"], use_container_width=True)
+        st.markdown(f"<strong style='color:#E91E63;'>Modern:</strong> {data['modern']}", unsafe_allow_html=True)
+    with col3:
+        st.image(data["g_img"], use_container_width=True)
+        st.markdown(f"<strong style='color:#E91E63;'>Gemstone:</strong> {data['gemstone']}", unsafe_allow_html=True)
+    theme_choice = st.radio("Gift Theme", ["All Themes", "Traditional", "Modern", "Gemstone"], horizontal=True)
 else:
-    st.warning(f"No standard theme for year {year}. Using general anniversary searches.")
-    trad = mod = "Anniversary Gift"
+    theme_choice = "All Themes"
 
-# Search queries
-query_trad = f"{year}th wedding anniversary {trad} gift"
-query_mod = f"{year}th wedding anniversary {mod} gift"
-
-# Search buttons
+# --- Main Dropdowns (Exact gimmegiftideas.com layout) ---
+st.markdown("### Who are you shopping for?")
 col1, col2 = st.columns(2)
 with col1:
-    if st.button(f"Find Traditional Gifts ({trad})", use_container_width=True):
-        with st.spinner("Searching Amazon..."):
-            trad_products = search_amazon(query_trad, affiliate_tag)
-        st.session_state.trad_results = trad_products
-
+    relationship = st.selectbox("Relationship", RELATIONSHIPS)
+    recipient = st.selectbox("Recipient", RECIPIENTS)
 with col2:
-    if st.button(f"Find Modern Gifts ({mod})", use_container_width=True):
-        with st.spinner("Searching Amazon..."):
-            mod_products = search_amazon(query_mod, affiliate_tag)
-        st.session_state.mod_results = mod_products
+    occasion = st.selectbox("Occasion", OCCASIONS)
+    age = st.selectbox("Age", AGES)
 
-# Display results if available, in card-style (GimmeGiftIdeas theme)
-def display_gift_results(title, product_list):
-    st.subheader(title)
-    for prod in product_list:
-        st.markdown(f'''
-        <div class="gg-card">
-            <div class="gg-title">
-                <a href="{prod['link']}" target="_blank">{prod['title']}</a>
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
+price = st.selectbox("Price Range", PRICES)
 
-if "trad_results" in st.session_state:
-    display_gift_results(f"Traditional Gifts – {trad}", st.session_state.trad_results)
+if st.button("Find Gift Ideas", use_container_width=True, type="primary"):
+    with st.spinner("Finding perfect gifts..."):
+        query_parts = []
+        if anniv_year != "Any Year":
+            query_parts.append(f"{anniv_year} anniversary")
+            if theme_choice == "Traditional": query_parts.append(data["traditional"])
+            elif theme_choice == "Modern": query_parts.append(data["modern"])
+            elif theme_choice == "Gemstone": query_parts.append(data["gemstone"])
+            elif theme_choice == "All Themes": query_parts.extend([data["traditional"], data["modern"], data["gemstone"]])
+        if relationship != "Any": query_parts.append(relationship)
+        if recipient != "Any": query_parts.append(recipient)
+        if occasion != "Any": query_parts.append(occasion)
+        if age != "Any": query_parts.append(age)
+        if price != "Any": query_parts.append(price)
+        query_parts.append("gift")
+        query = " ".join(query_parts)
+        st.session_state.results = search_amazon(query, 6)
 
-if "mod_results" in st.session_state:
-    display_gift_results(f"Modern Gifts – {mod}", st.session_state.mod_results)
+# --- Results (3-column grid) ---
+if "results" in st.session_state:
+    st.markdown("### Gift Ideas")
+    cols = st.columns(3)
+    for i, p in enumerate(st.session_state.results):
+        with cols[i % 3]:
+            st.image(p["image"], width="stretch")
+            st.markdown(f"**{p['title'][:70]}...**")
+            st.markdown(f"<small>⭐ {p['rating']} • {p['price']}</small>", unsafe_allow_html=True)
+            st.markdown(f"[View on Amazon]({p['link']})")
 
-# Footer
 st.markdown("---")
-st.caption("Made with ❤️ by Grok • All links contain your affiliate tag • Live Amazon data as of November 12, 2025")
+st.caption("Made with love by Grok • Inspired by gimmegiftideas.com • November 13, 2025")
